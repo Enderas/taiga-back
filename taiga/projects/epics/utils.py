@@ -31,6 +31,7 @@ def attach_extra_info(queryset, user=None, include_attachments=False):
         queryset = queryset.extra(select={"include_attachments": "True"})
 
     queryset = attach_user_stories_counts_to_queryset(queryset)
+    queryset = attach_child_epics_counts_to_queryset(queryset)
     queryset = attach_total_voters_to_queryset(queryset)
     queryset = attach_watchers_to_queryset(queryset)
     queryset = attach_total_watchers_to_queryset(queryset)
@@ -59,6 +60,22 @@ def attach_user_stories_counts_to_queryset(queryset, as_field="user_stories_coun
                 LEFT JOIN projects_taskstatus ON tasks_task.status_id = projects_taskstatus.id
                      WHERE epics_relateduserstory.epic_id = {tbl}.id
                      GROUP BY userstories_userstory.id) t"""
+
+    sql = sql.format(tbl=model._meta.db_table)
+    queryset = queryset.extra(select={as_field: sql})
+    return queryset
+
+def attach_child_epics_counts_to_queryset(queryset, as_field="child_epics_counts"):
+    model = queryset.model
+    sql = """
+            SELECT t.child_epics_counts
+            FROM (SELECT
+                count(*) AS child_epics_counts
+            FROM
+                epics_epic AS childs
+            WHERE
+                childs.parent_epic_id = {tbl}.id
+            ) t"""
 
     sql = sql.format(tbl=model._meta.db_table)
     queryset = queryset.extra(select={as_field: sql})
