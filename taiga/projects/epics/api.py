@@ -63,7 +63,8 @@ class EpicViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, Wa
     filter_fields = ["project",
                      "project__slug",
                      "assigned_to",
-                     "status__is_closed"]
+                     "status__is_closed",
+                     "parent_epic"]
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action in ["retrieve", "by_ref"]:

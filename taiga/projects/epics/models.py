@@ -68,6 +68,9 @@ class Epic(OCCModelMixin, WatchedModelMixin, BlockedMixin, TaggedMixin, models.M
     user_stories = models.ManyToManyField("userstories.UserStory", related_name="epics",
                                           through='RelatedUserStory',
                                           verbose_name=_("user stories"))
+
+    parent_epic = models.ForeignKey('self', null=True, blank=True, related_name='child_epic')
+
     external_reference = ArrayField(models.TextField(null=False, blank=False),
                                     null=True, blank=True, default=None, verbose_name=_("external reference"))
 

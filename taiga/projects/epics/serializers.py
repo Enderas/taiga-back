@@ -53,6 +53,7 @@ class EpicListSerializer(VoteResourceSerializerMixin, WatchedResourceSerializer,
     blocked_note = Field()
     is_closed = MethodField()
     user_stories_counts = MethodField()
+    parent_epic = Field(attr="parent_epic_id")
 
     def get_is_closed(self, obj):
         return obj.status is not None and obj.status.is_closed
