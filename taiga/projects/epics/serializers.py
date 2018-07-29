@@ -54,6 +54,7 @@ class EpicListSerializer(VoteResourceSerializerMixin, WatchedResourceSerializer,
     is_closed = MethodField()
     user_stories_counts = MethodField()
     child_epics_counts = MethodField()
+    epic_progress = MethodField()
     parent_epic = Field(attr="parent_epic_id")
 
     def get_is_closed(self, obj):
@@ -66,6 +67,10 @@ class EpicListSerializer(VoteResourceSerializerMixin, WatchedResourceSerializer,
     def get_child_epics_counts(self, obj):
         assert hasattr(obj, "child_epics_counts"), "instance must have a child_epics_counts attribute"
         return obj.child_epics_counts
+
+    def get_epic_progress(self, obj):
+        assert hasattr(obj, "epic_progress"), "instance must have an epic_progress attribute"
+        return obj.epic_progress
 
 
 class EpicSerializer(EpicListSerializer):

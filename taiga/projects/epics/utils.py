@@ -32,6 +32,7 @@ def attach_extra_info(queryset, user=None, include_attachments=False):
 
     queryset = attach_user_stories_counts_to_queryset(queryset)
     queryset = attach_child_epics_counts_to_queryset(queryset)
+    queryset = attach_epic_progress_to_queryset(queryset)
     queryset = attach_total_voters_to_queryset(queryset)
     queryset = attach_watchers_to_queryset(queryset)
     queryset = attach_total_watchers_to_queryset(queryset)
@@ -76,6 +77,41 @@ def attach_child_epics_counts_to_queryset(queryset, as_field="child_epics_counts
             WHERE
                 childs.parent_epic_id = {tbl}.id
             ) t"""
+
+    sql = sql.format(tbl=model._meta.db_table)
+    queryset = queryset.extra(select={as_field: sql})
+    return queryset
+
+def attach_epic_progress_to_queryset(queryset, as_field="epic_progress"):
+    model = queryset.model
+    sql = """
+            SELECT
+	            sum(t.epic_progress) / count(DISTINCT t.child_id) AS epic_progress
+            FROM (
+                SELECT
+	  				childs_epics.id AS child_id,
+                    CASE WHEN childs_epics.is_closed
+                        THEN 1::real / COALESCE(NULLIF((SELECT count(epics_relateduserstory.id) FROM epics_relateduserstory WHERE epics_relateduserstory.epic_id = childs_epics.id), 0), 1)
+                        ELSE
+							CASE WHEN userstories_userstory.is_closed
+								THEN 1::real / COALESCE(NULLIF((SELECT count(epics_relateduserstory.id) FROM epics_relateduserstory WHERE epics_relateduserstory.epic_id = childs_epics.id), 0), 1)
+								ELSE
+									COALESCE(COUNT(tasks_task.id) FILTER (WHERE projects_taskstatus.is_closed = TRUE)::real / NULLIF(COUNT(tasks_task.id), 0),0) / COALESCE(NULLIF((SELECT count(epics_relateduserstory.id) FROM epics_relateduserstory WHERE epics_relateduserstory.epic_id = childs_epics.id), 0), 1)
+								END
+                    END AS epic_progress
+                FROM
+                    (	SELECT childs.id, projects_epicstatus.is_closed
+						FROM
+							epics_epic AS childs
+							LEFT JOIN projects_epicstatus ON projects_epicstatus.id = childs.status_id
+						WHERE parent_epic_id = {tbl}.id
+                    ) AS childs_epics
+                    LEFT JOIN epics_relateduserstory ON epics_relateduserstory.epic_id = childs_epics.id
+                    LEFT JOIN userstories_userstory ON userstories_userstory.id = epics_relateduserstory.user_story_id
+                    LEFT JOIN tasks_task ON tasks_task.user_story_id = userstories_userstory.id
+                    LEFT JOIN projects_taskstatus ON tasks_task.status_id = projects_taskstatus.id
+                GROUP BY childs_epics.id, childs_epics.is_closed, userstories_userstory.id
+) AS t"""
 
     sql = sql.format(tbl=model._meta.db_table)
     queryset = queryset.extra(select={as_field: sql})
